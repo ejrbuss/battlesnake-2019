@@ -4,7 +4,7 @@ const Profile = require('./profile');
 
 // const MAX_DEPTH       = 10;
 const MAX_DEPTH       = 19 * 19;
-const SQUIRM_FACTOR   = 250 / 4;
+const SQUIRM_FACTOR   = 125 / 4;
 const FOOD_FACTOR     = 100;
 const STARVING_FACTOR = 3;
 
