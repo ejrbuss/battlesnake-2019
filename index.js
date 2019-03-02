@@ -38,7 +38,9 @@ app.post('/start', (request, response) => {
 app.post('/move', (request, response) => {
   // NOTE: Do something here to generate your move
   try {
-    return response.json(snake.move(request.body))
+    const move = snake.move(request.body);
+    console.log(move);
+    return response.json(move);
   } catch(err) {
     console.log(err)
     return response.json({ move: 'up' })
