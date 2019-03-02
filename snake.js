@@ -3,7 +3,8 @@ const Board = require('./board');
 const Profile = require('./profile');
 
 const MAX_DEPTH = 10000;
-const SQUIRM_FACTOR = 250 / 5;
+const SQUIRM_FACTOR = 250 / 8;
+const FOOD_FACTOR = 20;
 
 const DEAD_LENGTH = 0;
 const FAST_LENGTH = 1;
@@ -31,6 +32,7 @@ const move = Profile.wrapdump((state) => {
     const head            = Util.first(board.body);
     const options         = getOptions(board, head);
 
+    // Every possible spot is taken so return one that is not a wall or backwards.
     if (options.length === DEAD_LENGTH) {
         console.log(Board.str(board));
         console.log('DEAD');
@@ -39,10 +41,12 @@ const move = Profile.wrapdump((state) => {
         return Util.move(head, Util.up(head));
     }
 
+    // If there is only one possible move, return it.
     if (options.length === FAST_LENGTH) {
         console.log('FAST');
         return Util.move(head, options[0]);
     }
+    
     /*
     if (options.length === FILL_LENGTH) {
         console.log('FILL');
@@ -58,10 +62,17 @@ const move = Profile.wrapdump((state) => {
     });
     console.log(weightedOptions);
     const limitedOptions = limitOptions(weightedOptions);
+    
+    // If we are not hungry yet, return a random move from limitedOptions.
+    if (state.you.health >= FOOD_FACTOR) {
+        return Util.move(head, Util.first(Util.shuffle(limitedOptions)));
+    }
+    
     const foodWeightedOptions = limitedOptions.map(p =>
         [p[0], p[1], foodWeight(Util.points(food), p)]
     );
     Util.sort(foodWeightedOptions);
+    console.log(foodWeightedOptions);
     const move = Util.move(head, foodWeightedOptions[0]);
     return move;
 }, 'move');
