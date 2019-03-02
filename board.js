@@ -6,7 +6,7 @@ const board = Profile.wrap((width, height, body) => {
         width, height, body,
         heads  : body.map(() => 1),
         tail   : 0,
-        data   : new Float32Array(width * height),
+        data   : new Int8Array(width * height),
     };
     return update(board, body);
 }, 'board');
@@ -14,7 +14,10 @@ const board = Profile.wrap((width, height, body) => {
 const mergeTwo = (board1, board2) =>
     board(board1.width, board1.height,  board1.body.concat(board2.body));
 
-const merge = (boards) => {
+const merge = (boards, width, height) => {
+    if (boards.length === 0) {
+        return board(width, height, []);
+    }
     return boards.reduce((merged, board) => mergeTwo(merged, board));
 };
 
@@ -22,7 +25,6 @@ const at = Profile.wrap((board, x, y) =>
     board.data[x + y * board.width], 'at');
 
 const set = Profile.wrap((board, x, y, weight) => {
-    // console.log(`Setting ${x + y * board.width} = ${weight}`);
     board.data[x + y * board.width] = weight;
 }, 'set');
 
@@ -33,7 +35,7 @@ const str = board => {
     let str = '';
     for (let y = 0; y < board.height; y++) {
         for (let x = 0; x < board.width; x++) {
-            str += at(board, x, y).toFixed(1) + ' ';
+            str += at(board, x, y) === 1 ? 'X' : '_';
         }
         str += '\n';
     }
@@ -60,8 +62,8 @@ const forward = Profile.wrap((board, moves) => {
     board.body = moves.concat(board.body);
     board.heads.push(moves.length); 
     const index = tailIndex(board);
-    const points = board.body.slice(0, index);
-    // const points = board.body;    
+    //const points = board.body.slice(0, index);
+    const points = board.body;    
     update(board, points);
     board.tail++;
     return board;
@@ -72,8 +74,8 @@ const backward = Profile.wrap((board) => {
     const numHeads = board.heads.pop();
     board.body.splice(0, numHeads);
     const index = tailIndex(board);
-    const points = board.body.slice(0, index + 1);
-    // const points = board.body;
+    // const points = board.body.slice(0, index + 1);
+    const points = board.body;
     return update(board, points);
 }, 'backward');
 
@@ -89,6 +91,12 @@ const copy = Profile.wrap(({ width, height, body}) => {
     return board(width, height, [...body]);
 }, 'copy');
 
+const heads = Profile.wrap(board => {
+    const numHeads = Util.last(board.heads);
+    const heads = board.body.slice(0, numHeads);
+    return heads;
+}, 'heads');
+
 module.exports = {
     board,
     str,
@@ -99,4 +107,6 @@ module.exports = {
     forward,
     backward,
     copy,
+    heads,
+    update,
 };

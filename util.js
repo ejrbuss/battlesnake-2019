@@ -77,6 +77,9 @@ const move = ([x1, y1], [x2, y2]) => {
     }
 };
 
+const equal = ([x1, y1], [x2, y2]) =>
+    x1 === x2 && y1 === y2;
+
 module.exports = {
     first,
     last,
@@ -92,4 +95,5 @@ module.exports = {
     manhattan,
     sort,
     move,
+    equal,
 };

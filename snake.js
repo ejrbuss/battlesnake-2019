@@ -2,8 +2,11 @@ const Util = require('./util');
 const Board = require('./board');
 const Profile = require('./profile');
 
-const MAX_DEPTH = 10000;
-const SQUIRM_FACTOR = 250 / 5;
+// const MAX_DEPTH       = 10;
+const MAX_DEPTH       = 19 * 19;
+const SQUIRM_FACTOR   = 250 / 4;
+const FOOD_FACTOR     = 100;
+const STARVING_FACTOR = 3;
 
 let start;
 
@@ -11,62 +14,70 @@ const squirming = () =>
     Date.now() - start > SQUIRM_FACTOR;
 
 const move = Profile.wrapdump((state) => {
+    snakeBoardCache = {};
     let { width, height, food, snakes } = state.board;
     snakes = snakes.filter(({ id }) => id !== state.you.id);
-    // represent all snakes as a single board with multiple heads,
-    // fast update
-    // Possibly: cachee snakes board based on depth, take advantage of low 
-    // memory footprint
-    const snakeBoards     = snakes.map(snake => 
-        Board.board(width, height, Util.points(snake.body))
-    );
-    snakeBoards.forEach(b => {
-        Board.forward(b, naiveNext(Util.first(b.body)));
-    });
-    const board           = Board.board(width, height, Util.points(state.you.body));
-    const head            = Util.first(board.body);
-    const options         = getOptions(board, head);
+    const snakeBoard = getSnakesBoard(width, height, snakes);
+    const board      = Board.board(width, height, Util.points(state.you.body));
+    const head       = Util.first(board.body);
+    const options    = getOptions(Board.merge([board, snakeBoard]), head, width, height);
 
-    /*
-    if (options.length === FILL_LENGTH) {
-        console.log('FILL');
-        return Util.move(head, fillMove(board, food, ...options));
+    if (options.length === 0) {
+        const lastDitchOptions = getLastDitchOptions(board, head);
+        console.log('Last ditch effort!');
+        if (lastDitchOptions.length === 0) {
+            throw 'I Die!';
+        }
+        return Util.move(head, lastDitchOptions[0]);
     }
-    */
 
-    console.log('STANDARD');
-
-    const weightedOptions = options.map(p => {
+    const weightedOptions = options.map(p => { 
         start = Date.now();
-        return [p[0], p[1], score(board, snakeBoards, p, 0)]
+        return [p[0], p[1], score(board, snakeBoard, p, 0)]
     });
-    console.log(weightedOptions);
+    // console.log(weightedOptions);
     const limitedOptions = limitOptions(weightedOptions);
 
+    // If we are not hungry yet, return a random move from limitedOptions.
+    // If Real=lly hungry go for food no matter what
+    if (state.you.health < STARVING_FACTOR) {
+
+    }
+    // if (state.you.health >= FOOD_FACTOR * snakes.length) {
+    //   return Util.move(head, Util.first(Util.shuffle(limitedOptions)));
+    // }
+    
     const foodWeightedOptions = limitedOptions.map(p =>
         [p[0], p[1], foodWeight(Util.points(food), p)]
     );
     Util.sort(foodWeightedOptions);
+    // console.log(foodWeightedOptions);
     const move = Util.move(head, foodWeightedOptions[0]);
     return move;
 }, 'move');
 
-const score = Profile.wrap((board, snakeBoards, move, depth) => {
-    if (depth > MAX_DEPTH || squirming()) {
-        console.log(depth);
+const score = Profile.wrap((board, snakeBoard, move, depth) => {
+    if (depth >= MAX_DEPTH || squirming()) {
+        console.log('depth', depth);
         return Infinity;
         // return depth;
     }
 
-    if (!bounds(Board.merge([board, ...snakeBoards]), move)) {
+    if (!bounds(board, move)) {
         return depth;
     }
-    const next = naiveNext(move);
+    // console.log('move', move);
+    // console.log('board', Board.at(getSnakeBoardAtDepth(snakeBoard, depth), ...move));
+    // console.log(Board.str(getSnakeBoardAtDepth(snakeBoard, depth)));
+    if (Board.at(getSnakeBoardAtDepth(snakeBoard, depth), ...move) > 0) {
+        return depth;
+    }
+    const next = getOptions(board, move);
     let highScore = depth;
     Board.forward(board, [move]);
     while (next.length > 0) {
         const point = next.pop();
-        let newScore = score(board, snakeBoards, point, depth + 1);
+        let newScore = score(board, snakeBoard, point, depth + 1);
         if (newScore > highScore) {
             highScore = newScore;
         }
@@ -78,6 +89,42 @@ const score = Profile.wrap((board, snakeBoards, move, depth) => {
     Board.backward(board);
     return highScore;
 }, 'score');
+
+let snakeBoardCache = {};
+
+const getSnakeBoardAtDepth = Profile.wrap((board, depth) => {
+    if (snakeBoardCache[depth]) {
+        return snakeBoardCache[depth];
+    }
+    if (depth === 0) {
+        snakeBoardCache[0] = board; 
+        return board;
+    }
+    const next = Board.copy(snakeBoardCache[depth - 1]);
+    forwardSnakesBoard(next);
+    snakeBoardCache[depth] = next;
+    return next;
+}, 'getSnakeBoardAtDepth');
+
+const getSnakesBoard = Profile.wrap((width, height, snakes) => {
+    const heads = [];
+    const snakeBoards = snakes.map(snake => {
+        const body = Util.points(snake.body);
+        heads.push(body.shift());
+        return Board.board(width, height, body);
+    });
+    let snakeBoard = Board.merge(snakeBoards, width, height);
+    Board.forward(snakeBoard, heads);
+    snakeBoard.tail = 0;
+    forwardSnakesBoard(snakeBoard);
+    return snakeBoard;
+}, 'getSnakesBoard');
+
+const forwardSnakesBoard = Profile.wrap(board => {
+    const heads = Board.heads(board);
+    const moves = heads.flatMap(head => getOptions(board, head));
+    Board.forward(board, moves);
+}, 'forwardSnakesBoard');
 
 /*
 const fillMove = Profile.wrap((board, food, point1, point2) => {
@@ -160,6 +207,10 @@ const bounds = Profile.wrap((board, [x, y]) => {
 
 const getOptions = Profile.wrap((board, head) => {
     return naiveNext(head).filter(p => bounds(board, p));
+}, 'getOptions');
+
+const getLastDitchOptions = Profile.wrap((board, head) => {
+    return naiveNext(head).filter(p => bounds(board, p) || Util.equal(p, Util.last(board.body)));
 }, 'getOptions');
 
 const foodWeight = Profile.wrap((food, [x, y]) => 
