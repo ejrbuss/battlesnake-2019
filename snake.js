@@ -5,10 +5,6 @@ const Profile = require('./profile');
 const MAX_DEPTH = 10000;
 const SQUIRM_FACTOR = 250 / 5;
 
-const DEAD_LENGTH = 0;
-const FAST_LENGTH = 1;
-const FILL_LENGTH = 2;
-
 let start;
 
 const squirming = () => 
@@ -31,18 +27,6 @@ const move = Profile.wrapdump((state) => {
     const head            = Util.first(board.body);
     const options         = getOptions(board, head);
 
-    if (options.length === DEAD_LENGTH) {
-        console.log(Board.str(board));
-        console.log('DEAD');
-        // Should probably go straight, in the hopes that the board changes 
-        // with us
-        return Util.move(head, Util.up(head));
-    }
-
-    if (options.length === FAST_LENGTH) {
-        console.log('FAST');
-        return Util.move(head, options[0]);
-    }
     /*
     if (options.length === FILL_LENGTH) {
         console.log('FILL');
@@ -58,6 +42,7 @@ const move = Profile.wrapdump((state) => {
     });
     console.log(weightedOptions);
     const limitedOptions = limitOptions(weightedOptions);
+
     const foodWeightedOptions = limitedOptions.map(p =>
         [p[0], p[1], foodWeight(Util.points(food), p)]
     );
@@ -94,6 +79,7 @@ const score = Profile.wrap((board, snakeBoards, move, depth) => {
     return highScore;
 }, 'score');
 
+/*
 const fillMove = Profile.wrap((board, food, point1, point2) => {
     let count1 = 0;
     const board1 = Board.copy(board);
@@ -147,6 +133,7 @@ const fillMove = Profile.wrap((board, food, point1, point2) => {
     }
     throw 'Waaah!';
 });
+*/
 
 const limitOptions = options => {
     Util.sort(options, true);
