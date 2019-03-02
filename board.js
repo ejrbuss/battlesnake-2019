@@ -21,8 +21,10 @@ const merge = (boards) => {
 const at = Profile.wrap((board, x, y) =>
     board.data[x + y * board.width], 'at');
 
-const set = Profile.wrap((board, x, y, weight) =>
-    board.data[x + y * board.width] = weight, 'set');
+const set = Profile.wrap((board, x, y, weight) => {
+    // console.log(`Setting ${x + y * board.width} = ${weight}`);
+    board.data[x + y * board.width] = weight;
+}, 'set');
 
 const add = Profile.wrap((board, x, y, weight) =>
     board.data[x + y * board.width] += weight, 'add');
@@ -58,8 +60,8 @@ const forward = Profile.wrap((board, moves) => {
     board.body = moves.concat(board.body);
     board.heads.push(moves.length); 
     const index = tailIndex(board);
-    // const points = board.body.slice(0, index);
-    const points = board.body;    
+    const points = board.body.slice(0, index);
+    // const points = board.body;    
     update(board, points);
     board.tail++;
     return board;
@@ -70,8 +72,8 @@ const backward = Profile.wrap((board) => {
     const numHeads = board.heads.pop();
     board.body.splice(0, numHeads);
     const index = tailIndex(board);
-    // const points = board.body.slice(0, index + 1);
-    const points = board.body;
+    const points = board.body.slice(0, index + 1);
+    // const points = board.body;
     return update(board, points);
 }, 'backward');
 
@@ -83,11 +85,18 @@ const update = Profile.wrap((board, points) => {
     return board;
 }, 'update');
 
+const copy = Profile.wrap(({ width, height, body}) => {
+    return board(width, height, [...body]);
+}, 'copy');
+
 module.exports = {
     board,
     str,
     merge,
     at,
+    set,
+    add,
     forward,
     backward,
+    copy,
 };
