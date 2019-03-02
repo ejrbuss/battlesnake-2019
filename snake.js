@@ -97,6 +97,7 @@ const getSnakeBoardAtDepth = Profile.wrap((board, depth) => {
         return snakeBoardCache[depth];
     }
     if (depth === 0) {
+        forwardSnakesBoard(board);
         snakeBoardCache[0] = board; 
         return board;
     }
@@ -115,8 +116,8 @@ const getSnakesBoard = Profile.wrap((width, height, snakes) => {
     });
     let snakeBoard = Board.merge(snakeBoards, width, height);
     Board.forward(snakeBoard, heads);
-    snakeBoard.tail = 0;
-    forwardSnakesBoard(snakeBoard);
+    // snakeBoard.tail = 0;
+    // forwardSnakesBoard(snakeBoard);
     return snakeBoard;
 }, 'getSnakesBoard');
 
